@@ -3,72 +3,50 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="PO to MoM training records and interactive RCS evaluation">
-  <title>PO → MoM | 实验记录</title>
+  <meta name="description" content="PO to MoM project results and visualizations">
+  <title>PO to MoM | 项目入口</title>
   <style>
-    :root { color-scheme: light; --ink: #1f2d32; --muted: #607078; --line: #dce4e2; --green: #19745e; }
+    :root {
+      color-scheme: light;
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: #233039;
+      background: #f5f7f7;
+    }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; }
-    body { display: flex; flex-direction: column; min-width: 320px; height: 100dvh; background: #fff; color: var(--ink); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; letter-spacing: 0; }
-    header { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 20px; padding: 11px 24px; border-bottom: 1px solid var(--line); background: #fff; }
-    .brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; white-space: nowrap; }
-    .brand strong { font-size: 19px; }
-    .brand span { font-size: 12px; color: var(--muted); }
-    nav { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 6px; background: #f2f6f5; }
-    nav button { min-height: 36px; padding: 6px 14px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; }
-    nav button[aria-selected="true"] { background: #fff; color: var(--green); box-shadow: 0 1px 4px #1f2d321c; font-weight: 650; }
-    nav button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-    main { position: relative; flex: 1; min-height: 0; background: #fff; }
-    iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
-    .loading { position: absolute; inset: 0; display: grid; place-items: center; background: #fff; color: var(--muted); font-size: 13px; }
-    .loading[hidden] { display: none; }
-    @media (max-width: 760px) {
-      header { align-items: stretch; flex-direction: column; gap: 9px; padding: 9px 12px; }
-      .brand { justify-content: space-between; }
-      nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      nav button { min-width: 0; padding: 7px 5px; }
+    body { min-width: 320px; min-height: 100vh; margin: 0; }
+    header { border-bottom: 1px solid #dce3e3; background: #fff; }
+    .inner { width: min(100% - 40px, 880px); margin-inline: auto; }
+    header .inner { min-height: 64px; display: flex; align-items: center; }
+    h1 { margin: 0; font-size: 19px; font-weight: 650; }
+    main { padding-block: 48px; }
+    h2 { margin: 0 0 22px; font-size: 22px; font-weight: 650; }
+    nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    nav a {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      min-height: 76px; padding: 20px 22px; border: 1px solid #d7dfdf;
+      border-radius: 6px; background: #fff; color: #233039;
+      font-size: 16px; font-weight: 600; text-decoration: none;
+    }
+    nav a:hover { border-color: #277c6a; background: #f0f8f5; color: #176c5b; }
+    nav a:focus-visible { outline: 2px solid #277c6a; outline-offset: 3px; }
+    nav a span:last-child { color: #277c6a; font-size: 20px; font-weight: 400; }
+    @media (max-width: 600px) {
+      .inner { width: min(100% - 32px, 880px); }
+      main { padding-block: 32px; }
+      nav { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="brand"><strong>PO → MoM</strong><span>表面电流预测</span></div>
-    <nav role="tablist" aria-label="内容视图">
-      <button type="button" role="tab" data-view="weekly" aria-selected="true">Weekly Journal</button>
-      <button type="button" role="tab" data-view="record" aria-selected="false">Record</button>
-      <button type="button" role="tab" data-view="v6" aria-selected="false">V6 可视化</button>
-      <button type="button" role="tab" data-view="v7" aria-selected="false">V7 可视化</button>
+  <header><div class="inner"><h1>PO to MoM</h1></div></header>
+  <main class="inner">
+    <h2>项目内容</h2>
+    <nav aria-label="项目网站">
+      <a href="https://fishneedlegrandfather.github.io/visual-record/"><span>训练记录</span><span aria-hidden="true">↗</span></a>
+      <a href="https://fishneedlegrandfather.github.io/visual-weekly-journal/"><span>Weekly Journal</span><span aria-hidden="true">↗</span></a>
+      <a href="https://fishneedlegrandfather.github.io/visual-v6/"><span>V6 可视化</span><span aria-hidden="true">↗</span></a>
+      <a href="https://fishneedlegrandfather.github.io/visual-v7/"><span>V7 可视化</span><span aria-hidden="true">↗</span></a>
     </nav>
-  </header>
-  <main>
-    <div id="loading" class="loading">正在加载…</div>
-    <iframe id="viewer" title="Weekly Journal"></iframe>
   </main>
-  <script>
-    const views = {
-      weekly: ['weekly_journal.html', 'Weekly Journal'],
-      record: ['record.html', 'Record'],
-      v6: ['visualization.html', 'V6 可视化'],
-      v7: ['visualization_v7.html', 'V7 可视化']
-    };
-    const viewer = document.getElementById('viewer');
-    const loading = document.getElementById('loading');
-    const tabs = [...document.querySelectorAll('[data-view]')];
-    let current = null;
-    function selectView(name, updateHash = true) {
-      if (!Object.hasOwn(views, name)) name = 'weekly';
-      if (name === current) return;
-      current = name;
-      tabs.forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.view === name)));
-      loading.hidden = false;
-      viewer.title = views[name][1];
-      viewer.onload = () => { loading.hidden = true; };
-      viewer.src = views[name][0];
-      if (updateHash) history.replaceState(null, '', `#${name}`);
-    }
-    tabs.forEach(tab => tab.addEventListener('click', () => selectView(tab.dataset.view)));
-    window.addEventListener('hashchange', () => selectView(location.hash.slice(1), false));
-    selectView(location.hash.slice(1), false);
-  </script>
 </body>
 </html>
