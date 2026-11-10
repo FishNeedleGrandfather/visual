@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PO to MoM V7 | 18-angle evaluation</title>
+  <style>
+    :root { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; color: #202a2c; background: #f6f8f7; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    [hidden] { display: none !important; }
+    button, select { font: inherit; }
+    button:focus-visible, select:focus-visible { outline: 2px solid #1b7967; outline-offset: 2px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px 24px; padding: 15px 24px; background: #fff; border-bottom: 1px solid #dce3df; }
+    .heading { min-width: 0; }
+    h1 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: 0; }
+    .subtitle { margin-top: 3px; color: #647371; font-size: 12px; }
+    .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .case-tabs { display: flex; gap: 2px; max-width: 100%; overflow-x: auto; padding: 2px; border: 1px solid #d3ddd8; border-radius: 5px; background: #edf2ef; }
+    .case-tabs a { display: inline-flex; flex: none; align-items: center; height: 30px; padding: 0 11px; border-radius: 3px; color: #596a66; text-decoration: none; white-space: nowrap; font-size: 12px; }
+    .case-tabs a:hover { color: #1d3631; background: #e2eae5; }
+    .case-tabs a[aria-selected="true"] { color: #fff; background: #236f60; }
+    .case-tabs a:focus-visible { outline: 2px solid #1b7967; outline-offset: 2px; }
+    .control-label { display: block; margin-bottom: 3px; color: #697674; font-size: 11px; }
+    select { height: 34px; min-width: 116px; border: 1px solid #bdcac5; border-radius: 4px; padding: 0 9px; color: #1f3030; background: #fff; }
+    select.validation-angle, select option.validation-angle { color: #b42318; font-weight: 700; }
+    .segmented { display: flex; flex-wrap: wrap; gap: 2px; padding: 2px; border: 1px solid #d3ddd8; border-radius: 5px; background: #edf2ef; }
+    .segmented button { min-width: 51px; height: 30px; padding: 0 9px; border: 0; border-radius: 3px; color: #596a66; background: transparent; cursor: pointer; font-size: 12px; }
+    .segmented button:hover { color: #1d3631; background: #e2eae5; }
+    .segmented button[aria-pressed="true"] { color: #fff; background: #236f60; }
+    .graph-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; padding: 9px 24px; border-bottom: 1px solid #dce3df; background: #fff; }
+    .graph-toolbar .control-label { margin: 0; }
+    .graph-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 14px; }
+    .graph-controls label { display: inline-flex; align-items: center; gap: 5px; color: #41514d; font-size: 12px; }
+    .graph-controls input { width: 15px; height: 15px; margin: 0; accent-color: #236f60; }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid #dce3df; background: #fff; }
+    .metric { min-width: 0; padding: 13px 24px; border-right: 1px solid #e2e8e4; }
+    .metric:last-child { border-right: 0; }
+    .metric .label { color: #667572; font-size: 11px; }
+    .metric .value { margin-top: 3px; font-size: 19px; font-weight: 630; font-variant-numeric: tabular-nums; }
+    .metric .sub { margin-top: 1px; color: #74817d; font-size: 11px; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(390px, 1fr); min-height: 620px; height: calc(100dvh - 166px); }
+    .mesh-panel, .chart-panel { position: relative; min-width: 0; min-height: 0; }
+    .mesh-panel { background: #e9efed; border-right: 1px solid #d4dfda; overflow: hidden; }
+    #mesh { position: absolute; inset: 0 0 42px 0; }
+    #mesh canvas { display: block; }
+    .mesh-header { position: absolute; top: 17px; left: 19px; right: 19px; display: flex; justify-content: space-between; align-items: start; gap: 12px; pointer-events: none; }
+    .panel-title { font-size: 13px; font-weight: 640; }
+    .panel-detail { margin-top: 3px; color: #64736e; font-size: 11px; }
+    .mesh-footer { position: absolute; right: 20px; bottom: 17px; left: 20px; display: flex; align-items: end; justify-content: space-between; gap: 12px; pointer-events: none; }
+    .axis-hint { color: #657570; font-size: 11px; line-height: 1.5; }
+    .legend { width: min(210px, 50%); text-align: right; color: #4e625c; font-size: 11px; font-variant-numeric: tabular-nums; }
+    .legend-bar { height: 8px; margin: 6px 0 2px; border-radius: 2px; background: linear-gradient(90deg, #284c9b, #27a2a0, #ead350, #e04d35); }
+    .legend-ends { display: flex; justify-content: space-between; }
+    #graph-legend { display: none; gap: 16px; align-items: center; flex-wrap: wrap; color: #e9eff0; font-size: 11px; }
+    .graph-key { display: inline-flex; align-items: center; gap: 6px; }
+    .graph-key::before { content: ""; width: 17px; height: 3px; background: var(--key); }
+    body.graph-view .metrics, body.graph-view .chart-panel { display: none; }
+    body.graph-view .workspace { display: block; height: calc(100dvh - 150px); min-height: 500px; }
+    body.graph-view .mesh-panel { height: 100%; border: 0; background: #111315; }
+    body.graph-view .mesh-header { color: #f1f5f4; }
+    body.graph-view .mesh-header .panel-detail, body.graph-view .axis-hint { color: #b7c3c1; }
+    body.graph-view .legend { display: none; }
+    body.graph-view #graph-legend { display: flex; }
+    #mesh-error { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; padding: 28px; color: #8b3d38; text-align: center; background: #e9efed; }
+    .chart-panel { display: flex; flex-direction: column; background: #fff; }
+    .chart-header { padding: 18px 22px 0; }
+    .chart-legend { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 12px; color: #53605d; font-size: 11px; }
+    .series-key { display: inline-flex; align-items: center; gap: 6px; }
+    .series-key::before { content: ""; display: block; width: 17px; height: 3px; background: var(--key); }
+    .chart-wrap { position: relative; flex: 1; min-height: 260px; margin: 8px 10px 0 0; }
+    #rcs-chart { display: block; width: 100%; height: 100%; }
+    #tooltip { display: none; position: absolute; padding: 7px 9px; border: 1px solid #d3dcd7; border-radius: 3px; background: rgba(255,255,255,.97); box-shadow: 0 2px 9px #263d321a; font-size: 11px; line-height: 1.6; pointer-events: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .note { padding: 12px 22px 16px; border-top: 1px solid #e6ebe8; color: #62716c; font-size: 11px; line-height: 1.55; }
+    .note strong { color: #334b45; font-weight: 600; }
+    @media (max-width: 900px) {
+      .workspace { display: block; height: auto; min-height: 0; }
+      .mesh-panel { height: min(64vh, 540px); min-height: 370px; border-right: 0; border-bottom: 1px solid #d4dfda; }
+      .chart-panel { height: 480px; }
+      body.graph-view .workspace { height: calc(100dvh - 190px); min-height: 430px; }
+    }
+    @media (max-width: 600px) {
+      .topbar { padding: 12px 14px; }
+      .graph-toolbar { padding: 9px 14px; }
+      h1 { font-size: 17px; }
+      .controls { width: 100%; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric { padding: 10px 14px; border-bottom: 1px solid #e2e8e4; }
+      .metric:nth-child(2) { border-right: 0; }
+      .metric .value { font-size: 16px; }
+      .segmented button { min-width: 0; padding: 0 6px; }
+      .mesh-panel { height: 54vh; min-height: 340px; }
+      .mesh-header { top: 12px; left: 13px; right: 13px; }
+      .mesh-footer { bottom: 10px; left: 13px; right: 13px; }
+      .chart-panel { height: 450px; }
+      body.graph-view .workspace { height: calc(100dvh - 255px); min-height: 410px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="heading">
+      <h1>V7 · Case 1 · 电流与 RCS</h1>
+      <div class="subtitle" id="metadata">读取数据中</div>
+    </div>
+    <div class="controls">
+      <nav class="case-tabs" role="tablist" aria-label="目标模型">
+        <a href="?case=case1" role="tab" data-case="case1">Case 1</a>
+        <a href="?case=case2" role="tab" data-case="case2">Case 2</a>
+        <a href="?case=case3" role="tab" data-case="case3">Case 3</a>
+        <a href="?case=case4" role="tab" data-case="case4">Case 4</a>
+        <a href="?case=case5" role="tab" data-case="case5">Case 5</a>
+        <a href="?case=single" role="tab" data-case="single">Single</a>
+      </nav>
+      <div class="segmented" role="group" aria-label="显示视图">
+        <button type="button" data-view="current" aria-pressed="true">电流 / RCS</button>
+        <button type="button" data-view="graph" aria-pressed="false">聚类 / 耦合</button>
+      </div>
+      <label class="current-control"><span class="control-label">入射方位角</span><select id="incident-phi" aria-label="入射方位角"></select></label>
+      <div class="current-control"><span class="control-label">表面电流</span><div class="segmented" id="modes" role="group" aria-label="电流显示模式">
+        <button type="button" data-mode="0" aria-pressed="false">PO</button>
+        <button type="button" data-mode="1" aria-pressed="true">MoM</button>
+        <button type="button" data-mode="2" aria-pressed="false">预测</button>
+        <button type="button" data-mode="3" aria-pressed="false">PO 误差</button>
+        <button type="button" data-mode="4" aria-pressed="false">预测误差</button>
+      </div></div>
+    </div>
+  </header>
+  <section class="graph-toolbar" id="graph-toolbar" aria-label="聚类与边" hidden>
+    <div class="graph-controls"><span class="control-label">层级</span><div class="segmented" role="group" aria-label="聚类层级">
+      <button type="button" data-level="g1" aria-pressed="false">G1</button>
+      <button type="button" data-level="g2" aria-pressed="true">G2</button>
+    </div></div>
+    <div class="graph-controls">
+      <label><input id="graph-centers" type="checkbox" checked>中心点</label>
+      <label><input id="graph-geo" type="checkbox">几何边</label>
+      <label><input id="graph-coupling" type="checkbox" checked>耦合边</label>
+      <label><input id="graph-normals" type="checkbox">法向</label>
+      <label><input id="graph-wireframe" type="checkbox">网格线</label>
+    </div>
+  </section>
+  <section class="metrics" aria-label="当前入射角的误差">
+    <div class="metric"><div class="label">PO 电流相对误差</div><div class="value" id="po-rel">—</div><div class="sub">相对 MoM，复电流 L2</div></div>
+    <div class="metric"><div class="label">预测电流相对误差</div><div class="value" id="pred-rel">—</div><div class="sub">相对 MoM，复电流 L2</div></div>
+    <div class="metric"><div class="label">PO RCS 误差</div><div class="value" id="po-rmse">—</div><div class="sub">相对 MoM，360° RMSE</div></div>
+    <div class="metric"><div class="label">预测 RCS 误差</div><div class="value" id="pred-rmse">—</div><div class="sub">相对 MoM，360° RMSE</div></div>
+  </section>
+  <main class="workspace">
+    <section class="mesh-panel" aria-label="三维表面电流">
+      <div id="mesh"></div>
+      <div class="mesh-header"><div><div class="panel-title" id="mesh-title">表面电流</div><div class="panel-detail" id="mesh-detail"></div></div></div>
+      <div class="mesh-footer"><div class="axis-hint">拖动旋转 · 滚轮缩放 · 右键平移</div><div class="legend"><div id="legend-title">|Re J| (A/m)</div><div class="legend-bar"></div><div class="legend-ends"><span>0</span><span id="legend-max">—</span></div></div><div id="graph-legend"><span class="graph-key" style="--key:#ffffff">中心点</span><span class="graph-key" style="--key:#78c8ff">几何边</span><span class="graph-key" style="--key:#ff806c">耦合边</span><span class="graph-key" style="--key:#f7d35c">法向</span></div></div>
+      <div id="mesh-error"></div>
+    </section>
+    <section class="chart-panel" aria-label="单站与双站 RCS">
+      <div class="chart-header">
+        <div class="segmented" role="group" aria-label="RCS 类型" style="margin-bottom:12px;width:fit-content;max-width:100%">
+          <button type="button" data-rcs-view="monostatic" aria-pressed="true">单站 RCS</button>
+          <button type="button" data-rcs-view="bistatic" aria-pressed="false">双站切面</button>
+        </div>
+        <div class="panel-title" id="rcs-title">水平面 RCS · θ = 90°</div><div class="panel-detail" id="rcs-detail">观察方位角 φ = 0°–360° · dBsm</div>
+        <div class="chart-legend"><span class="series-key" style="--key:#d8783b">PO</span><span class="series-key" style="--key:#2768ad">MoM</span><span class="series-key" style="--key:#238c69">预测</span><span class="series-key" id="po2-legend" style="--key:#8f6a1c" hidden>FEKO PO · 2 次反射</span><span class="series-key" id="po3-legend" style="--key:#a3508d" hidden>FEKO PO · 3 次反射</span></div>
+      </div>
+      <div class="chart-wrap"><canvas id="rcs-chart" aria-label="RCS 曲线图"></canvas><div id="tooltip"></div></div>
+      <div class="note"><strong>计算口径：</strong>PO、MoM、预测三条 RCS 曲线由三角元中心、面积和复电流做远场积分估算。电流着色显示 |Re J|，误差指标使用全部实部与虚部。<span id="rcs-source-note" hidden> Single 的二次、三次反射 PO 曲线来自 FEKO 直接导出的远场；与 MoM 电流积分估算的误差只作趋势参考，严格比较需统一远场计算口径。</span></div>
+    </section>
+  </main>
+  <script src="v7/case1_data.js"></script>
+  <script src="v7/case2_data.js"></script>
+  <script src="v7/case3_data.js"></script>
+  <script src="v7/case4_data.js"></script>
+  <script src="v7/case5_data.js"></script>
+  <script src="v7/single_data.js"></script>
+  <script src="v7/po_reflections_single_data.js"></script>
+  <script src="v7/coupling_data.js"></script>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const requestedCase = new URLSearchParams(location.search).get('case');
+    const caseKey = ['case1', 'case2', 'case3', 'case4', 'case5', 'single'].includes(requestedCase) ? requestedCase : 'case1';
+    const data = window.VIS_DATA_CASES?.[caseKey];
+    if (!data) throw new Error(`${caseKey}_data.js is missing; run generate_visualization_v7.py`);
+    const graph = window.COUPLING_DATA_CASES?.[caseKey];
+    if (!graph || graph.triangles !== data.triangle_count) throw new Error(`Coupling data for ${caseKey} is missing or mismatched`);
+    document.querySelector('[data-view="current"]').textContent = '电流 / RCS';
+    document.querySelectorAll('[data-case]').forEach(tab => {
+      tab.setAttribute('aria-selected', String(tab.dataset.case === caseKey));
+    });
+    document.querySelector('h1').textContent = `V7 · ${data.case_label || 'Case 1'} · 电流与 RCS`;
+    document.title = `V7 · ${data.case_label || 'Case 1'} | 电流与 RCS`;
+    const select = document.getElementById('incident-phi');
+    const validationPhis = new Set(data.validation_phis || []);
+    const modes = [...document.querySelectorAll('[data-mode]')];
+    let angleIndex = 0;
+    let mode = 1;
+    let activeView = 'current';
+    let activeLevel = 'g2';
+    let selectedCluster = null;
+    const clusterMembers = {
+      g1: Array(graph.counts.g1).fill(0),
+      g2: Array(graph.counts.g2).fill(0),
+    };
+    graph.c01.forEach(g1 => {
+      clusterMembers.g1[g1]++;
+      clusterMembers.g2[graph.c12[g1]]++;
+    });
+    const modeNames = ['PO', 'MoM', '预测', 'PO 误差', '预测误差'];
+    const curveColors = ['#d8783b', '#2768ad', '#238c69', '#8f6a1c', '#a3508d'];
+    const colorStops = [[40,76,155], [39,162,160], [234,211,80], [224,77,53]];
+
+    document.getElementById('metadata').textContent = `${(data.frequency_hz / 1e9).toFixed(2)} GHz · 入射 θ = ${data.incident_theta}° · ${data.triangle_count.toLocaleString()} 三角元 · ${data.checkpoint_label || 'checkpoint'} epoch ${data.checkpoint_epoch}`;
+    data.angles.forEach((entry, index) => {
+      const option = document.createElement('option');
+      option.value = index;
+      option.textContent = `φ = ${entry.incident_phi}°`;
+      option.classList.toggle('validation-angle', validationPhis.has(entry.incident_phi));
+      select.append(option);
+    });
+
+    function markSelectedAngle() {
+      select.classList.toggle('validation-angle', validationPhis.has(data.angles[angleIndex].incident_phi));
+    }
+    markSelectedAngle();
+
+    const viewport = document.getElementById('mesh');
+    let renderer, scene, camera, controls, mesh, colors, wireMesh, overlayGroup, angleGuideGroup, meshCenter, meshRadius;
+
+    function guideLabel(text, color, width = 0.19) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 96;
+      const context = canvas.getContext('2d');
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.font = '700 42px Segoe UI, sans-serif';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.lineJoin = 'round';
+      context.lineWidth = 9;
+      context.strokeStyle = 'rgba(255,255,255,0.95)';
+      context.strokeText(text, canvas.width / 2, canvas.height / 2);
+      context.fillStyle = color;
+      context.fillText(text, canvas.width / 2, canvas.height / 2);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+      }));
+      sprite.scale.set(width, width * 0.375, 1);
+      sprite.renderOrder = 20;
+      return sprite;
+    }
+
+    function guideLine(points, color, opacity = 0.9) {
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const material = new THREE.LineBasicMaterial({color, transparent: true, opacity, depthTest: false});
+      const line = new THREE.Line(geometry, material);
+      line.renderOrder = 15;
+      return line;
+    }
+
+    function guideSegments(values, color, opacity = 0.9) {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(values, 3));
+      const material = new THREE.LineBasicMaterial({color, transparent: true, opacity, depthTest: false});
+      const lines = new THREE.LineSegments(geometry, material);
+      lines.renderOrder = 15;
+      return lines;
+    }
+
+    function buildAngleGuides(center, radius) {
+      const group = new THREE.Group();
+      group.position.set(-center.x, -center.y, -center.z);
+      const tickInner = radius * 0.9775;
+      const tickOuter = radius * 1.0225;
+      const labelRadius = radius * 1.075;
+      const tickLabelWidth = Math.max(radius * 0.095, 0.08);
+      const phiColor = '#e65f2b';
+      const thetaColor = '#008fc4';
+
+      const phiPoints = [];
+      for (let degree = 0; degree <= 360; degree++) {
+        const angle = THREE.MathUtils.degToRad(degree);
+        phiPoints.push(new THREE.Vector3(radius * Math.cos(angle), radius * Math.sin(angle), 0));
+      }
+      group.add(guideLine(phiPoints, 0xe65f2b));
+      const phiTicks = [];
+      for (let degree = 0; degree < 360; degree += 5) {
+        const angle = THREE.MathUtils.degToRad(degree);
+        const cosine = Math.cos(angle), sine = Math.sin(angle);
+        phiTicks.push(
+          tickInner * cosine, tickInner * sine, 0,
+          tickOuter * cosine, tickOuter * sine, 0,
+        );
+        const label = guideLabel(`${degree}°`, phiColor, tickLabelWidth);
+        label.position.set(labelRadius * cosine, labelRadius * sine, radius * 0.0175);
+        group.add(label);
+      }
+      group.add(guideSegments(phiTicks, 0xe65f2b));
+
+      const thetaPoints = [];
+      for (let degree = 0; degree <= 180; degree++) {
+        const angle = THREE.MathUtils.degToRad(degree);
+        thetaPoints.push(new THREE.Vector3(radius * Math.sin(angle), 0, radius * Math.cos(angle)));
+      }
+      group.add(guideLine(thetaPoints, 0x008fc4));
+      const thetaTicks = [];
+      for (let degree = 0; degree <= 180; degree += 5) {
+        const angle = THREE.MathUtils.degToRad(degree);
+        const sine = Math.sin(angle), cosine = Math.cos(angle);
+        thetaTicks.push(
+          tickInner * sine, 0, tickInner * cosine,
+          tickOuter * sine, 0, tickOuter * cosine,
+        );
+        const label = guideLabel(`${degree}°`, thetaColor, tickLabelWidth);
+        label.position.set(labelRadius * sine, -radius * 0.0375, labelRadius * cosine);
+        group.add(label);
+      }
+      group.add(guideSegments(thetaTicks, 0x008fc4));
+
+      const phiName = guideLabel('φ', phiColor, radius * 0.14);
+      phiName.position.set(radius * 1.16, radius * 0.11, radius * 0.04);
+      group.add(phiName);
+      const thetaName = guideLabel('θ', thetaColor, radius * 0.14);
+      thetaName.position.set(radius * 0.78, -radius * 0.06, radius * 0.78);
+      group.add(thetaName);
+
+      const axisLength = radius * 1.14;
+      const axisLabelDistance = radius * 1.19;
+      const axes = [
+        [new THREE.Vector3(1, 0, 0), 0xd84a45, 'x', new THREE.Vector3(axisLabelDistance, 0, 0)],
+        [new THREE.Vector3(0, 1, 0), 0x35a66f, 'y', new THREE.Vector3(0, axisLabelDistance, 0)],
+        [new THREE.Vector3(0, 0, 1), 0x466fce, 'z', new THREE.Vector3(0, 0, axisLabelDistance)],
+      ];
+      axes.forEach(([direction, color, name, position]) => {
+        group.add(new THREE.ArrowHelper(
+          direction,
+          new THREE.Vector3(),
+          axisLength,
+          color,
+          radius * 0.06,
+          radius * 0.0325,
+        ));
+        const label = guideLabel(name, `#${color.toString(16).padStart(6, '0')}`, radius * 0.11);
+        label.position.copy(position);
+        group.add(label);
+      });
+      return group;
+    }
+
+    try {
+      renderer = new THREE.WebGLRenderer({antialias: true, alpha: false});
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+      renderer.setClearColor('#e9efed');
+      viewport.append(renderer.domElement);
+      scene = new THREE.Scene();
+      const vertices = data.vertices;
+      const faces = data.faces;
+      const bbox = new THREE.Box3();
+      let farthestRadius = 0;
+      for (let i = 0; i < vertices.length; i += 3) {
+        const point = new THREE.Vector3(vertices[i], vertices[i+1], vertices[i+2]);
+        bbox.expandByPoint(point);
+        farthestRadius = Math.max(farthestRadius, point.length());
+      }
+      const center = bbox.getCenter(new THREE.Vector3());
+      const extent = bbox.getSize(new THREE.Vector3());
+      const radius = Math.max(extent.length() * 0.5, 0.1);
+      const guideRadius = Math.max(farthestRadius * 1.5, 0.15);
+      meshCenter = center;
+      meshRadius = radius;
+      const positions = new Float32Array(faces.length * 3);
+      colors = new Float32Array(positions.length / 3 * 4);
+      for (let i = 0; i < faces.length; i++) {
+        const at = faces[i] * 3;
+        positions[i * 3] = vertices[at] - center.x;
+        positions[i * 3 + 1] = vertices[at + 1] - center.y;
+        positions[i * 3 + 2] = vertices[at + 2] - center.z;
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+      geometry.computeVertexNormals();
+      mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({vertexColors: true, side: THREE.DoubleSide}));
+      scene.add(mesh);
+      wireMesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({color: 0xd8dde0, wireframe: true, transparent: true, opacity: 0.13, depthWrite: false}));
+      wireMesh.visible = false;
+      scene.add(wireMesh);
+      overlayGroup = new THREE.Group();
+      scene.add(overlayGroup);
+      angleGuideGroup = buildAngleGuides(center, guideRadius);
+      scene.add(angleGuideGroup);
+      const guideExtent = center.length() + guideRadius * 1.22;
+      const sceneRadius = Math.max(radius, guideExtent);
+      camera = new THREE.PerspectiveCamera(38, 1, 0.001, sceneRadius * 100);
+      camera.position.set(sceneRadius * 1.9, -sceneRadius * 2.2, sceneRadius * 1.4);
+      camera.up.set(0, 0, 1);
+      camera.lookAt(0, 0, 0);
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.target.set(0, 0, 0);
+      controls.minDistance = sceneRadius * 0.35;
+      controls.maxDistance = sceneRadius * 15;
+      controls.update();
+      let cameraFit = 1;
+      new ResizeObserver(() => {
+        const width = viewport.clientWidth, height = viewport.clientHeight;
+        if (!width || !height) return;
+        camera.aspect = width / height;
+        const nextFit = Math.max(1, 1.1 / camera.aspect);
+        camera.position.sub(controls.target).multiplyScalar(nextFit / cameraFit).add(controls.target);
+        cameraFit = nextFit;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height);
+      }).observe(viewport);
+      const animate = () => { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); };
+      animate();
+    } catch (error) {
+      const box = document.getElementById('mesh-error');
+      box.style.display = 'flex';
+      box.textContent = `三维视图无法加载：${error.message}`;
+    }
+
+    function colorFor(value) {
+      const t = Math.max(0, Math.min(1, value));
+      const pos = t * (colorStops.length - 1);
+      const a = Math.min(Math.floor(pos), colorStops.length - 2);
+      const f = pos - a;
+      return [0,1,2].map(channel => (colorStops[a][channel] * (1-f) + colorStops[a+1][channel] * f) / 255);
+    }
+
+    function updateMesh(entry) {
+      const magnitude = entry.magnitude[mode];
+      const max = Math.max(entry.color_max[mode >= 3 ? 1 : 0], 1e-12);
+      document.getElementById('mesh-title').textContent = `${modeNames[mode]} · 入射 φ = ${entry.incident_phi}°`;
+      document.getElementById('mesh-detail').textContent = mode >= 3 ? `${data.triangle_count.toLocaleString()} 个面元 · 对 MoM 的实部差值幅值` : `${data.triangle_count.toLocaleString()} 个面元 · 实部电流幅值`;
+      document.getElementById('legend-title').textContent = mode >= 3 ? '|Re ΔJ| (A/m)' : '|Re J| (A/m)';
+      document.getElementById('legend-max').textContent = max.toExponential(2);
+      if (!mesh) return;
+      for (let face = 0; face < magnitude.length; face++) {
+        const rgb = colorFor(magnitude[face] / max);
+        for (let vertex = 0; vertex < 3; vertex++) colors.set([...rgb, 1], (face * 3 + vertex) * 4);
+      }
+      mesh.geometry.attributes.color.needsUpdate = true;
+    }
+
+    function graphPositions(layer) {
+      const positions = new Float32Array(layer.centers.length);
+      for (let index = 0; index < positions.length; index++) {
+        positions[index] = layer.centers[index] - meshCenter.getComponent(index % 3);
+      }
+      return positions;
+    }
+
+    function graphEdges(positions, indices, color, opacity) {
+      const segments = new Float32Array(indices.length * 3);
+      for (let index = 0; index < indices.length; index++) {
+        segments.set(positions.subarray(indices[index] * 3, indices[index] * 3 + 3), index * 3);
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(segments, 3));
+      return new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({color, transparent: true, opacity}));
+    }
+
+    function graphNormals(positions, normals) {
+      const segments = new Float32Array(positions.length * 2);
+      for (let index = 0; index < positions.length; index += 3) {
+        const target = index * 2;
+        for (let axis = 0; axis < 3; axis++) {
+          segments[target + axis] = positions[index + axis];
+          segments[target + 3 + axis] = positions[index + axis] + normals[index + axis] * meshRadius * 0.07;
+        }
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(segments, 3));
+      return new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({color: 0xf7d35c, transparent: true, opacity: 0.9}));
+    }
+
+    function updateGraph() {
+      if (!mesh || !overlayGroup) return;
+      while (overlayGroup.children.length) {
+        const child = overlayGroup.children[0];
+        overlayGroup.remove(child);
+        child.geometry.dispose();
+        child.material.dispose();
+      }
+      const level = activeLevel;
+      const layer = graph.layers[level];
+      const palette = Array.from({length: graph.counts[level]}, (_, id) =>
+        new THREE.Color().setHSL(
+          ((id + 1) * 0.61803398875 + (level === 'g1' ? 0.137 : 0.274)) % 1,
+          0.55 + (id % 3) * 0.1,
+          0.48 + (id % 5) * 0.035,
+          THREE.SRGBColorSpace
+        )
+      );
+      for (let face = 0; face < graph.triangles; face++) {
+        const g1 = graph.c01[face];
+        const cluster = level === 'g1' ? g1 : graph.c12[g1];
+        const color = palette[cluster];
+        const brightness = selectedCluster === null ? 1 : cluster === selectedCluster ? 1.2 : 0.5;
+        const alpha = selectedCluster === null || cluster === selectedCluster ? 1 : 0.5;
+        for (let vertex = 0; vertex < 3; vertex++) {
+          colors.set([color.r * brightness, color.g * brightness, color.b * brightness, alpha], (face * 3 + vertex) * 4);
+        }
+      }
+      mesh.geometry.attributes.color.needsUpdate = true;
+      mesh.material.transparent = selectedCluster !== null;
+      mesh.material.depthWrite = selectedCluster === null;
+      mesh.material.needsUpdate = true;
+      const positions = graphPositions(layer);
+      if (document.getElementById('graph-centers').checked) {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        overlayGroup.add(new THREE.Points(geometry, new THREE.PointsMaterial({color: selectedCluster === null ? 0xffffff : 0x777777, transparent: selectedCluster !== null, opacity: selectedCluster === null ? 1 : 0.5, size: meshRadius * 0.014, sizeAttenuation: true})));
+        if (selectedCluster !== null) {
+          const selectedPosition = positions.slice(selectedCluster * 3, selectedCluster * 3 + 3);
+          const selectedGeometry = new THREE.BufferGeometry();
+          selectedGeometry.setAttribute('position', new THREE.BufferAttribute(selectedPosition, 3));
+          overlayGroup.add(new THREE.Points(selectedGeometry, new THREE.PointsMaterial({color: 0xffffff, size: meshRadius * 0.032, sizeAttenuation: true})));
+        }
+      }
+      if (document.getElementById('graph-geo').checked) {
+        overlayGroup.add(graphEdges(positions, layer.geo_edges, 0x78c8ff, selectedCluster === null ? 0.76 : 0.12));
+      }
+      if (document.getElementById('graph-coupling').checked) {
+        if (selectedCluster === null) {
+          overlayGroup.add(graphEdges(positions, layer.cpl_edges, 0xff806c, 0.9));
+        } else {
+          const connected = [];
+          const other = [];
+          for (let index = 0; index < layer.cpl_edges.length; index += 2) {
+            const source = layer.cpl_edges[index];
+            const target = layer.cpl_edges[index + 1];
+            (source === selectedCluster || target === selectedCluster ? connected : other).push(source, target);
+          }
+          overlayGroup.add(graphEdges(positions, other, 0xa86d66, 0.5));
+          overlayGroup.add(graphEdges(positions, connected, 0xffc09b, 1));
+        }
+      }
+      if (document.getElementById('graph-normals').checked) {
+        overlayGroup.add(graphNormals(positions, layer.normals));
+      }
+      wireMesh.visible = document.getElementById('graph-wireframe').checked;
+      document.getElementById('mesh-title').textContent = selectedCluster === null
+        ? `${level.toUpperCase()} · ${graph.counts[level]} 个聚类`
+        : `${level.toUpperCase()} #${selectedCluster + 1} · ${clusterMembers[level][selectedCluster]} 个三角元`;
+      document.getElementById('mesh-detail').textContent =
+        `${(layer.cpl_edges.length / 2).toLocaleString()} 条耦合边 · ${(layer.geo_edges.length / 2).toLocaleString()} 条几何边 · 半径 ${graph.coupling_config.radius_lambda[level].toFixed(2)} λ（${graph.coupling_config.radius_m[level].toFixed(3)} m）/ top ${level === 'g1' ? 32 : 8}`;
+    }
+
+    function setView(view) {
+      activeView = view;
+      selectedCluster = null;
+      const graphView = view === 'graph';
+      document.body.classList.toggle('graph-view', graphView);
+      document.getElementById('graph-toolbar').hidden = !graphView;
+      document.querySelectorAll('.current-control').forEach(control => { control.hidden = graphView; });
+      document.querySelectorAll('[data-view]').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.view === view));
+      });
+      document.querySelectorAll('[data-case]').forEach(tab => {
+        tab.href = `?case=${tab.dataset.case}${graphView ? '&view=graph' : ''}`;
+      });
+      document.querySelector('h1').textContent = `V7 · ${data.case_label} · ${graphView ? '聚类与耦合' : '电流 / RCS'}`;
+      document.title = `V7 · ${data.case_label} | ${graphView ? '聚类与耦合' : '电流 / RCS'}`;
+      document.getElementById('metadata').textContent = graphView
+        ? `${data.triangle_count.toLocaleString()} 三角元 · ${graph.cluster_method === 'connected_kmeans_6d' ? '几何边约束 ' : ''}6 维 KMeans（法向权重 ${graph.normal_weight}） · G1 ${graph.counts.g1}（平均约 ${graph.cluster_targets.triangles_per_g1} 面元） · G2 ${graph.counts.g2}（平均约 ${graph.cluster_targets.g1_per_g2} 个 G1）`
+        : `${(data.frequency_hz / 1e9).toFixed(2)} GHz · 入射 θ = ${data.incident_theta}° · ${data.triangle_count.toLocaleString()} 三角元 · ${data.checkpoint_label || 'checkpoint'} epoch ${data.checkpoint_epoch}`;
+      if (overlayGroup) overlayGroup.visible = graphView;
+      if (wireMesh) wireMesh.visible = graphView && document.getElementById('graph-wireframe').checked;
+      if (renderer) renderer.setClearColor(graphView ? '#111315' : '#e9efed');
+      if (!graphView && mesh) {
+        mesh.material.transparent = false;
+        mesh.material.depthWrite = true;
+        mesh.material.needsUpdate = true;
+      }
+      if (graphView) updateGraph(); else update();
+    }
+
+    // Inserted into the viewer's module scope by generate_visualization_v7.py.
+    const canvas = document.getElementById('rcs-chart');
+    const tooltip = document.getElementById('tooltip');
+    const mono = data.monostatic;
+    if (!mono) throw new Error('Missing monostatic V7 data; regenerate the visualization');
+    const reflections = caseKey === 'single' ? window.PO_REFLECTIONS_SINGLE : null;
+    if (caseKey === 'single' && (!reflections || reflections.incident_theta !== mono.incident_theta ||
+        reflections.incident_phi.length !== mono.incident_phi.length ||
+        reflections.incident_phi.some((phi, index) => phi !== mono.incident_phi[index]) ||
+        [2, 3].some(count => reflections.rcs_db_by_reflections?.[count]?.length !== mono.incident_phi.length))) {
+      throw new Error('FEKO reflection RCS is missing or has mismatched angles');
+    }
+    const reflectionRmse = reflections ? Object.fromEntries([2, 3].map(count => {
+      const curve = reflections.rcs_db_by_reflections[count];
+      const mse = curve.reduce((sum, value, index) =>
+        sum + (value - mono.rcs_db[1][index]) ** 2, 0) / curve.length;
+      return [count, Math.sqrt(mse)];
+    })) : null;
+    let rcsView = 'monostatic';
+    let chartArea = null;
+    let hoverIndex = null;
+
+    function chartSeries() {
+      return rcsView === 'monostatic'
+        ? {phis: mono.incident_phi, curves: reflections
+            ? [...mono.rcs_db, reflections.rcs_db_by_reflections[2], reflections.rcs_db_by_reflections[3]]
+            : mono.rcs_db}
+        : {phis: data.observation_phi, curves: data.angles[angleIndex].rcs_db};
+    }
+
+    function updateRcsMetadata() {
+      const isMono = rcsView === 'monostatic';
+      const entry = data.angles[angleIndex];
+      const showReflections = isMono && Boolean(reflections);
+      for (const count of [2, 3]) {
+        const legend = document.getElementById(`po${count}-legend`);
+        legend.hidden = !showReflections;
+        if (showReflections) {
+          legend.textContent = `FEKO PO · ${count} 次反射 (约 ${reflectionRmse[count].toFixed(2)} dB RMSE)`;
+        }
+      }
+      document.getElementById('rcs-source-note').hidden = !showReflections;
+      document.getElementById('rcs-title').textContent = isMono
+        ? `单站 RCS · θ = ${mono.incident_theta}°`
+        : '双站 RCS 切面 · 观察 θ = 90°';
+      document.getElementById('rcs-detail').textContent = isMono
+        ? `入射 φ = ${mono.incident_phi[0]}°–${mono.incident_phi.at(-1)}° · ${mono.incident_phi.length} 个方向 · dBsm`
+        : `入射 θ = ${data.incident_theta}°，φ = ${entry.incident_phi}° · 观察 φ = 0°–360° · dBsm`;
+      document.getElementById('po-rmse').textContent = `${(isMono ? mono.po_rmse_db : entry.po_rcs_rmse_db).toFixed(2)} dB`;
+      document.getElementById('pred-rmse').textContent = `${(isMono ? mono.pred_rmse_db : entry.pred_rcs_rmse_db).toFixed(2)} dB`;
+      for (const id of ['po-rmse', 'pred-rmse']) {
+        document.getElementById(id).parentElement.querySelector('.sub').textContent = isMono
+          ? `相对 MoM，单站 ${mono.incident_phi.length} 方向 RMSE`
+          : '相对 MoM，当前入射的双站切面 RMSE';
+      }
+    }
+
+    function drawChart() {
+      updateRcsMetadata();
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const isMono = rcsView === 'monostatic';
+      const {phis, curves} = chartSeries();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      const w = rect.width, h = rect.height;
+      const left = 61, right = 25, top = 14, bottom = 45;
+      const width = Math.max(1, w - left - right), height = Math.max(1, h - top - bottom);
+      const all = curves.flat();
+      const lo = Math.floor(Math.min(...all) / 10) * 10;
+      const hi = Math.max(Math.ceil(Math.max(...all) / 10) * 10, lo + 10);
+      const minPhi = phis[0], maxPhi = phis.at(-1);
+      const pointX = phi => left + (phi - minPhi) / Math.max(maxPhi - minPhi, 1) * width;
+      const pointY = value => top + (hi - value) / (hi - lo) * height;
+      chartArea = {left, width, top, height, minPhi, maxPhi};
+      ctx.font = '11px Segoe UI, sans-serif';
+      ctx.lineWidth = 1;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'right';
+      for (let tick = lo; tick <= hi; tick += 10) {
+        const y = pointY(tick);
+        ctx.strokeStyle = '#e8eeeb';
+        ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(left + width, y); ctx.stroke();
+        ctx.fillStyle = '#70807a';
+        ctx.fillText(String(tick), left - 8, y);
+      }
+      const ticks = isMono
+        ? phis.filter((_, index) => index % (width < 380 ? 3 : 2) === 0 || index === phis.length - 1)
+        : phis.filter(phi => phi % 60 === 0);
+      ctx.textAlign = 'center';
+      for (const tick of ticks) {
+        const x = pointX(tick);
+        ctx.strokeStyle = '#eef2ef';
+        ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, top + height); ctx.stroke();
+        const isValidation = isMono && validationPhis.has(tick);
+        ctx.fillStyle = isValidation ? '#b42318' : '#70807a';
+        ctx.font = `${isValidation ? '700 ' : ''}11px Segoe UI, sans-serif`;
+        ctx.fillText(String(tick), x, top + height + 17);
+      }
+      ctx.font = '11px Segoe UI, sans-serif';
+      ctx.fillStyle = '#62716b';
+      ctx.fillText(isMono ? '入射 / 单站观察 φ (°)' : '观察 φ (°)', left + width / 2, h - 7);
+      curves.forEach((curve, seriesIndex) => {
+        ctx.strokeStyle = curveColors[seriesIndex];
+        ctx.lineWidth = seriesIndex === 1 ? 2.3 : 1.8;
+        ctx.beginPath();
+        curve.forEach((value, index) => {
+          const x = pointX(phis[index]), y = pointY(value);
+          if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        if (isMono) curve.forEach((value, index) => {
+          const isValidation = validationPhis.has(phis[index]);
+          ctx.beginPath();
+          ctx.arc(pointX(phis[index]), pointY(value), isValidation ? 4.1 : 2.7, 0, Math.PI * 2);
+          ctx.fillStyle = curveColors[seriesIndex];
+          ctx.fill();
+          if (isValidation) {
+            ctx.strokeStyle = '#b42318';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          }
+        });
+      });
+      if (isMono) {
+        const x = pointX(data.angles[angleIndex].incident_phi);
+        ctx.strokeStyle = '#667a7288';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, top + height); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      if (hoverIndex !== null) {
+        const x = pointX(phis[hoverIndex]);
+        ctx.strokeStyle = '#667a7277';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, top + height); ctx.stroke();
+      }
+    }
+
+    function closestChartIndex(event) {
+      if (!chartArea) return null;
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      if (x < chartArea.left || x > chartArea.left + chartArea.width) return null;
+      const phi = chartArea.minPhi + (x - chartArea.left) / chartArea.width * (chartArea.maxPhi - chartArea.minPhi);
+      const {phis} = chartSeries();
+      return phis.reduce((best, value, index) => Math.abs(value - phi) < Math.abs(phis[best] - phi) ? index : best, 0);
+    }
+
+    canvas.addEventListener('mousemove', event => {
+      hoverIndex = closestChartIndex(event);
+      if (hoverIndex === null) { tooltip.style.display = 'none'; drawChart(); return; }
+      const {phis, curves} = chartSeries();
+      const phi = phis[hoverIndex];
+      const isValidation = rcsView === 'monostatic' && validationPhis.has(phi);
+      const phiText = isValidation ? `<strong style="color:#b42318">φ ${phi}° · 验证</strong>` : `φ ${phi}°`;
+      tooltip.innerHTML = `${phiText}<br>PO ${curves[0][hoverIndex].toFixed(2)} dBsm<br>MoM ${curves[1][hoverIndex].toFixed(2)} dBsm<br>预测 ${curves[2][hoverIndex].toFixed(2)} dBsm`
+        + (rcsView === 'monostatic' && reflections
+          ? `<br>FEKO PO · 2 次反射 ${curves[3][hoverIndex].toFixed(2)} dBsm<br>FEKO PO · 3 次反射 ${curves[4][hoverIndex].toFixed(2)} dBsm`
+          : '');
+      tooltip.style.display = 'block';
+      const rect = canvas.getBoundingClientRect();
+      tooltip.style.left = `${Math.max(4, Math.min(event.clientX - rect.left + 12, rect.width - tooltip.offsetWidth - 8))}px`;
+      tooltip.style.top = `${Math.max(4, Math.min(event.clientY - rect.top - 22, rect.height - tooltip.offsetHeight - 5))}px`;
+      drawChart();
+    });
+    canvas.addEventListener('mouseleave', () => { hoverIndex = null; tooltip.style.display = 'none'; drawChart(); });
+    canvas.addEventListener('click', event => {
+      if (rcsView !== 'monostatic') return;
+      const index = closestChartIndex(event);
+      if (index === null) return;
+      angleIndex = data.angles.findIndex(entry => entry.incident_phi === mono.incident_phi[index]);
+      select.value = String(angleIndex);
+      markSelectedAngle();
+      update();
+    });
+    document.querySelectorAll('[data-rcs-view]').forEach(button => button.addEventListener('click', () => {
+      rcsView = button.dataset.rcsView;
+      hoverIndex = null;
+      tooltip.style.display = 'none';
+      document.querySelectorAll('[data-rcs-view]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      drawChart();
+    }));
+    new ResizeObserver(drawChart).observe(canvas.parentElement);
+
+
+    function update() {
+      const entry = data.angles[angleIndex];
+      document.getElementById('po-rel').textContent = `${(entry.po_rel * 100).toFixed(2)}%`;
+      document.getElementById('pred-rel').textContent = `${(entry.pred_rel * 100).toFixed(2)}%`;
+      document.getElementById('po-rmse').textContent = `${entry.po_rcs_rmse_db.toFixed(2)} dB`;
+      document.getElementById('pred-rmse').textContent = `${entry.pred_rcs_rmse_db.toFixed(2)} dB`;
+      updateMesh(entry);
+      drawChart();
+    }
+    select.addEventListener('change', () => { angleIndex = Number(select.value); markSelectedAngle(); update(); });
+    modes.forEach(button => button.addEventListener('click', () => {
+      mode = Number(button.dataset.mode);
+      modes.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      updateMesh(data.angles[angleIndex]);
+    }));
+    document.querySelectorAll('[data-level]').forEach(button => button.addEventListener('click', () => {
+      activeLevel = button.dataset.level;
+      selectedCluster = null;
+      document.querySelectorAll('[data-level]').forEach(item => {
+        item.setAttribute('aria-pressed', String(item === button));
+      });
+      updateGraph();
+    }));
+    ['graph-centers', 'graph-geo', 'graph-coupling', 'graph-normals', 'graph-wireframe'].forEach(id => {
+      document.getElementById(id).addEventListener('change', updateGraph);
+    });
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    renderer?.domElement.addEventListener('click', event => {
+      if (activeView !== 'graph') return;
+      event.stopPropagation();
+      const bounds = renderer.domElement.getBoundingClientRect();
+      pointer.set(
+        2 * (event.clientX - bounds.left) / bounds.width - 1,
+        1 - 2 * (event.clientY - bounds.top) / bounds.height,
+      );
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster.intersectObject(mesh, false)[0];
+      if (hit && hit.faceIndex < graph.triangles) {
+        const g1 = graph.c01[hit.faceIndex];
+        selectedCluster = activeLevel === 'g1' ? g1 : graph.c12[g1];
+      } else {
+        selectedCluster = null;
+      }
+      updateGraph();
+    });
+    document.addEventListener('click', () => {
+      if (activeView !== 'graph' || selectedCluster === null) return;
+      selectedCluster = null;
+      updateGraph();
+    });
+    document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => {
+      setView(button.dataset.view);
+    }));
+    update();
+    setView(new URLSearchParams(location.search).get('view') === 'graph' ? 'graph' : 'current');
+  </script>
+</body>
+</html>

@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Record | PO → MoM</title>
+  <style>
+    :root { color-scheme: light; --ink: #1f2d32; --muted: #5e6e73; --line: #dce4e2; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #fff; color: var(--ink); }
+    body { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 15px; line-height: 1.72; letter-spacing: 0; }
+    main { max-width: 1400px; margin: 0 auto; padding: 30px 26px 70px; }
+    h1, h2, h3 { line-height: 1.3; }
+    h1 { margin: 0 0 22px; font-size: 27px; }
+    h2 { margin: 38px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--line); font-size: 20px; }
+    h3 { margin: 25px 0 12px; font-size: 16px; }
+    p { margin: 11px 0; }
+    a { color: #2768ad; }
+    code { padding: 1px 4px; border-radius: 3px; background: #eef4f5; font-family: Consolas, monospace; font-size: .92em; }
+    pre { overflow-x: auto; padding: 14px; border: 1px solid var(--line); background: #f7faf9; }
+    pre code { padding: 0; background: transparent; }
+    .table-scroll { width: 100%; overflow-x: auto; margin: 18px 0 24px; border: 1px solid var(--line); border-radius: 5px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 9px 11px; border-bottom: 1px solid #e5ece9; border-right: 1px solid #e5ece9; text-align: left; white-space: nowrap; }
+    th:last-child, td:last-child { border-right: 0; }
+    tr:last-child td { border-bottom: 0; }
+    th { background: #f0f5f3; font-weight: 650; }
+    tbody tr:hover { background: #f7faf9; }
+    img { max-width: 100%; height: auto; }
+    .math-block { overflow-x: auto; padding: 6px 0; }
+    @media (max-width: 680px) { main { padding: 22px 14px 50px; } h1 { font-size: 23px; } h2 { font-size: 18px; } }
+  </style>
+  <script>window.MathJax = {tex: {inlineMath: [['$', '$'], ['\\(', '\\)']]}, svg: {fontCache: 'global'}};</script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body><main><h1>训练记录</h1>
+<h2>脚本区别</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>脚本</th>
+<th>LocalExchange / DownBlock</th>
+<th>BiasTransformerBlock</th>
+<th>MGTransformer 多次调用</th>
+<th>MG 后 LocalExchange 多次调用</th>
+<th style="text-align: right;">当前默认 MG_num</th>
+<th>checkpoint</th>
+<th>注释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>train.py</code></td>
+<td>Post-Norm</td>
+<td>Pre-Norm</td>
+<td>共享参数</td>
+<td>共享参数</td>
+<td style="text-align: right;">2</td>
+<td><code>case1_1ghz_best.pt</code></td>
+<td>基础版本，作为后续结构实验的对照。</td>
+</tr>
+<tr>
+<td><code>trainV2.py</code></td>
+<td>Pre-Norm</td>
+<td>Pre-Norm</td>
+<td>共享参数</td>
+<td>共享参数</td>
+<td style="text-align: right;">2</td>
+<td><code>case1_1ghz_bestV2.pt</code></td>
+<td>将主要残差块改为 Pre-Norm，用于验证 Pre-Norm 对深层训练和梯度传播的作用。</td>
+</tr>
+<tr>
+<td><code>trainV3.py</code></td>
+<td>Post-Norm</td>
+<td>Pre-Norm</td>
+<td>每次独立参数</td>
+<td>每次独立参数</td>
+<td style="text-align: right;">2</td>
+<td><code>case1_1ghz_bestV3.pt</code></td>
+<td>保留 Post-Norm，但让多层 MGTransformer 使用独立参数，用于验证参数不共享的作用。</td>
+</tr>
+<tr>
+<td><code>trainV4.py</code></td>
+<td>Pre-Norm</td>
+<td>Pre-Norm</td>
+<td>每次独立参数</td>
+<td>每次独立参数</td>
+<td style="text-align: right;">3</td>
+<td><code>case1_1ghz_bestV4.pt</code></td>
+<td>同时采用 Pre-Norm 和独立参数。</td>
+</tr>
+<tr>
+<td><code>trainV5.py</code></td>
+<td>Pre-Norm</td>
+<td>Pre-Norm</td>
+<td>共享参数</td>
+<td>共享参数</td>
+<td style="text-align: right;">2</td>
+<td><code>case1_1ghz_bestV5.pt</code></td>
+<td>由 V2 扩展，网络不变；依次训练 case1、case2，以平均验证loss选择best。</td>
+</tr>
+<tr>
+<td><code>trainV6.py</code></td>
+<td>Pre-Norm</td>
+<td>Pre-Norm</td>
+<td>共享参数</td>
+<td>共享参数</td>
+<td style="text-align: right;">2</td>
+<td><code>case1_1ghz_bestV6.pt</code></td>
+<td>网络沿用V2；每个epoch对全部case样本累计梯度，再统一执行一次optimizer step，以各case平均验证loss选择best。</td>
+</tr>
+<tr>
+<td><code>trainV7.py</code></td>
+<td>Pre-Norm</td>
+<td>Pre-Norm</td>
+<td>共享参数</td>
+<td>共享参数</td>
+<td style="text-align: right;">4</td>
+<td><code>case1_1ghz_bestV7_4_eta.pt</code></td>
+<td>沿用V6主干与训练方式；新增14维入射源支路和10维G0几何节点MLP，两者均输出乘性与加性调制，在入口注入主干；几何缓存复用一次前向内的固定几何量与Green核计算。</td>
+</tr>
+</tbody>
+</table></div>
+<h2>训练结果</h2>
+<h3>二个 Case 训练</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th style="text-align: right;">序号</th>
+<th>脚本</th>
+<th style="text-align: right;">MG_num</th>
+<th style="text-align: right;">Round</th>
+<th style="text-align: right;">Epoch</th>
+<th>统一lr</th>
+<th style="text-align: right;">train loss (case1)</th>
+<th style="text-align: right;">验证loss (case1)</th>
+<th style="text-align: right;">train loss (case2)</th>
+<th style="text-align: right;">验证loss (case2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;"></td>
+<td>PO baseline</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td></td>
+<td style="text-align: right;">0.4651140</td>
+<td style="text-align: right;">0.4716737</td>
+<td style="text-align: right;">0.6114222</td>
+<td style="text-align: right;">0.5977157</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td><code>train.py</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">100</td>
+<td>True</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;">0.34</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;">0.43</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td><code>trainV2.py</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">100</td>
+<td>True</td>
+<td style="text-align: right;">0.2556597</td>
+<td style="text-align: right;">0.3124883</td>
+<td style="text-align: right;">0.2644765</td>
+<td style="text-align: right;">0.3346760</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td><code>trainV3.py</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">100</td>
+<td>True</td>
+<td style="text-align: right;">0.3473585</td>
+<td style="text-align: right;">0.3977745</td>
+<td style="text-align: right;">0.2788116</td>
+<td style="text-align: right;">0.3514389</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td><code>train.py</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">100</td>
+<td>True</td>
+<td style="text-align: right;">0.3161856</td>
+<td style="text-align: right;">0.3687931</td>
+<td style="text-align: right;">0.4054257</td>
+<td style="text-align: right;">0.4521745</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td><code>trainV2.py</code></td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">100</td>
+<td>True</td>
+<td style="text-align: right;">0.1185857</td>
+<td style="text-align: right;">0.2083498</td>
+<td style="text-align: right;">0.1794636</td>
+<td style="text-align: right;">0.2775576</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td><code>trainV4.py</code></td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">100</td>
+<td>True</td>
+<td style="text-align: right;">0.1014225</td>
+<td style="text-align: right;">0.1943720</td>
+<td style="text-align: right;">0.1743607</td>
+<td style="text-align: right;">0.2596381</td>
+</tr>
+<tr>
+<td style="text-align: right;">7</td>
+<td><code>trainV5.py</code></td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1000</td>
+<td>True</td>
+<td style="text-align: right;">0.06171694</td>
+<td style="text-align: right;">0.1601393</td>
+<td style="text-align: right;">0.07219689</td>
+<td style="text-align: right;">0.1813488</td>
+</tr>
+</tbody>
+</table></div>
+<h3>三个 Case 训练</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th style="text-align: right;">序号</th>
+<th>脚本</th>
+<th style="text-align: right;">MG_num</th>
+<th style="text-align: right;">Epoch</th>
+<th style="text-align: right;">最佳Epoch</th>
+<th style="text-align: right;">train loss (case1)</th>
+<th style="text-align: right;">验证loss (case1)</th>
+<th style="text-align: right;">train loss (case2)</th>
+<th style="text-align: right;">验证loss (case2)</th>
+<th style="text-align: right;">train loss (case3)</th>
+<th style="text-align: right;">验证loss (case3)</th>
+<th style="text-align: right;">平均train loss</th>
+<th style="text-align: right;">平均验证loss</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;"></td>
+<td>PO baseline</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;">0.4651140</td>
+<td style="text-align: right;">0.4716737</td>
+<td style="text-align: right;">0.6114222</td>
+<td style="text-align: right;">0.5977157</td>
+<td style="text-align: right;">0.5367418</td>
+<td style="text-align: right;">0.5056661</td>
+<td style="text-align: right;">0.5377593</td>
+<td style="text-align: right;">0.5250185</td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td><code>trainV6.py</code></td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3000</td>
+<td style="text-align: right;">462</td>
+<td style="text-align: right;">0.04296171</td>
+<td style="text-align: right;">0.1226621</td>
+<td style="text-align: right;">0.05313023</td>
+<td style="text-align: right;">0.1357329</td>
+<td style="text-align: right;">0.03616315</td>
+<td style="text-align: right;">0.1053813</td>
+<td style="text-align: right;">0.04408503</td>
+<td style="text-align: right;">0.1212588</td>
+</tr>
+</tbody>
+</table></div>
+<h3>五个 Case 训练</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th style="text-align: right;">序号</th>
+<th>脚本</th>
+<th style="text-align: right;">MG_num</th>
+<th style="text-align: right;">Epoch</th>
+<th style="text-align: right;">最佳Epoch</th>
+<th style="text-align: right;">case1 train/val</th>
+<th style="text-align: right;">case2 train/val</th>
+<th style="text-align: right;">case3 train/val</th>
+<th style="text-align: right;">case4 train/val</th>
+<th style="text-align: right;">case5 train/val</th>
+<th style="text-align: right;">平均train/val</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;"></td>
+<td>PO baseline</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;">0.4651140 / 0.4716737</td>
+<td style="text-align: right;">0.6114222 / 0.5977158</td>
+<td style="text-align: right;">0.5367418 / 0.5056661</td>
+<td style="text-align: right;">0.6407698 / 0.6255563</td>
+<td style="text-align: right;">0.3923243 / 0.3864167</td>
+<td style="text-align: right;">0.5292744 / 0.5174057</td>
+</tr>
+<tr>
+<td style="text-align: right;">9</td>
+<td><code>trainV6.py</code></td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1000</td>
+<td style="text-align: right;">494</td>
+<td style="text-align: right;">0.04624768 / 0.1362400</td>
+<td style="text-align: right;">0.05960255 / 0.1733138</td>
+<td style="text-align: right;">0.03895196 / 0.1031478</td>
+<td style="text-align: right;">0.06664200 / 0.1973725</td>
+<td style="text-align: right;">0.04865366 / 0.1385167</td>
+<td style="text-align: right;">0.05201957 / 0.1497182</td>
+</tr>
+<tr>
+<td style="text-align: right;">10</td>
+<td><code>trainV6.py</code> (<code>V6_8</code>)</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">1000</td>
+<td style="text-align: right;">487</td>
+<td style="text-align: right;">0.03587838 / 0.1321653</td>
+<td style="text-align: right;">0.04743682 / 0.1579915</td>
+<td style="text-align: right;">0.02917274 / 0.1024080</td>
+<td style="text-align: right;">0.05391008 / 0.1962207</td>
+<td style="text-align: right;">0.03893700 / 0.1281163</td>
+<td style="text-align: right;">0.04106700 / 0.1433804</td>
+</tr>
+</tbody>
+</table></div>
+<h3>五个 Case 训练（eta 固定归一化）</h3>
+<p>序号11沿用 V6 网络和训练方式，工作站设置 <code>MG_num=4</code>，未加入 V7 的入射源支路或几何编码支路。</p>
+<p>序号12使用 V7，<code>MG_num=4</code>；在相同 eta 数据集上增加入射源与几何支路。入射源输入为传播方向3维、方向与法向外积9维、相位的cos/sin共2维；几何输入为中心3维、法向3维、面积1维，以及G0邻域、所属G1/G2邻域的法向变化各1维。两条MLP各输出512维，拆为两组256维，按 <code>h = h + h * gamma + beta</code> 依次注入G0，不在每轮MG中重复注入。</p>
+<p>数据集由 <code>dataset_case1to5_1ghz.pt</code> 改为 <code>dataset_case1to5_1ghz_eta.pt</code>：原来使用每个样本的 PO 平均幅值作为 <code>scale</code>，电流输入为 <code>J_PO / scale</code>，标签为 <code>(J_MoM - J_PO) / scale</code>；现在统一使用 <code>eta0=376.730313668</code>，电流输入为 <code>eta0 * J_PO</code>，标签为 <code>eta0 * (J_MoM - J_PO)</code>，保存的物理恢复系数 <code>scale=1/eta0=0.002654418727985</code>。</p>
+<p>5个 case 共90个样本的几何、聚类、几何边、耦合边、频率和角度均保持不变。每个 case 使用15个训练角度，验证角度为 <code>phi=50/110/170 deg</code>。由于归一化不同，本节 MSE 不应与序号9、10的 MSE 直接比较。</p>
+<p>下表各 case 和平均值均使用各自最佳 checkpoint、<code>MG_num=4</code> 在本地重新评估，PO baseline 也按 eta 数据集重算。序号11取第412轮，序号12取第705轮。Checkpoint 保存的是当轮参数更新前累计的 train loss，而下表为更新参数后固定最佳模型的复算值：序号11的日志/复算平均 train loss 为 <code>0.02944848 / 0.02929179</code>，序号12为 <code>0.00669073 / 0.00605494</code>。复算平均验证 loss 与各自 checkpoint 一致。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th style="text-align: right;">序号</th>
+<th>脚本</th>
+<th style="text-align: right;">MG_num</th>
+<th style="text-align: right;">Epoch</th>
+<th style="text-align: right;">最佳Epoch</th>
+<th style="text-align: right;">case1 train/val</th>
+<th style="text-align: right;">case2 train/val</th>
+<th style="text-align: right;">case3 train/val</th>
+<th style="text-align: right;">case4 train/val</th>
+<th style="text-align: right;">case5 train/val</th>
+<th style="text-align: right;">平均train/val</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;"></td>
+<td>PO baseline（eta）</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;">0.21504844 / 0.21760768</td>
+<td style="text-align: right;">0.25583449 / 0.25575049</td>
+<td style="text-align: right;">0.25064789 / 0.24167807</td>
+<td style="text-align: right;">0.21447395 / 0.21316708</td>
+<td style="text-align: right;">0.17532636 / 0.17410488</td>
+<td style="text-align: right;">0.22226623 / 0.22046164</td>
+</tr>
+<tr>
+<td style="text-align: right;">11</td>
+<td><code>trainV6.py</code> (<code>V6_4_eta</code>)</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1000</td>
+<td style="text-align: right;">412</td>
+<td style="text-align: right;">0.02903799 / 0.06075905</td>
+<td style="text-align: right;">0.03309569 / 0.06604467</td>
+<td style="text-align: right;">0.02512861 / 0.05116812</td>
+<td style="text-align: right;">0.03215844 / 0.07281842</td>
+<td style="text-align: right;">0.02703823 / 0.05606414</td>
+<td style="text-align: right;">0.02929179 / 0.06137088</td>
+</tr>
+<tr>
+<td style="text-align: right;">12</td>
+<td><code>trainV7.py</code> (<code>V7_4_eta</code>)</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1000</td>
+<td style="text-align: right;">705</td>
+<td style="text-align: right;">0.00545363 / 0.02793141</td>
+<td style="text-align: right;">0.00705845 / 0.03033356</td>
+<td style="text-align: right;">0.00469026 / 0.02227455</td>
+<td style="text-align: right;">0.00724584 / 0.04956882</td>
+<td style="text-align: right;">0.00582652 / 0.03307219</td>
+<td style="text-align: right;">0.00605494 / 0.03263611</td>
+</tr>
+</tbody>
+</table></div>
+<p>序号11参数文件：<code>checkpoints/case1_1ghz_bestV6_4_eta.pt</code>；曲线数据：<code>checkpoints/loss_historyV6_4_eta.npy</code>。序号12参数文件：<code>checkpoints/case1_1ghz_bestV7_4_eta.pt</code>；曲线数据：<code>checkpoints/loss_historyV7_4_eta.npy</code>。两份曲线均包含1000轮平均 train/val loss；序号12的 checkpoint 平均验证 loss 为 <code>0.03263610</code>，与本地复算值仅有约 <code>1.7e-9</code> 的浮点差异。</p>
+<h3>序号9、11、12的统一电流相对误差</h3>
+<p>统一使用 <code>error = ||J_pred - J_MoM||_F / ||J_MoM||_F * 100%</code>，包含所有面元、xyz三个方向的实部和虚部，不做面积加权，与电流可视化的相对误差定义一致。物理电流按各数据集的 <code>scale</code> 恢复：<code>J_pred = (X[:, 7:13] + delta) * scale</code>，<code>J_MoM = (X[:, 7:13] + Y) * scale</code>；同一样本的公共缩放系数在比值中抵消，因此两种归一化可以直接比较。</p>
+<p>序号9使用第494轮最佳参数和原数据集，序号11使用第412轮最佳参数和 eta 数据集，序号12使用第705轮最佳参数和同一 eta 数据集，三者均为 <code>MG_num=4</code>。每个样本先计算相对误差，再分别对每个 case 的15个训练角度和3个验证角度取平均，最后对5个 case 等权平均；不是把所有样本的面元拼接后计算一个范数。序号9、11沿用已完成的复算结果，序号12按相同口径补算。下表单位均为百分比，越低越好。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>序号 / 基准</th>
+<th style="text-align: right;">case1 train/val</th>
+<th style="text-align: right;">case2 train/val</th>
+<th style="text-align: right;">case3 train/val</th>
+<th style="text-align: right;">case4 train/val</th>
+<th style="text-align: right;">case5 train/val</th>
+<th style="text-align: right;">average train/val</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PO base error</td>
+<td style="text-align: right;">74.77 / 75.11</td>
+<td style="text-align: right;">78.89 / 78.93</td>
+<td style="text-align: right;">78.09 / 77.40</td>
+<td style="text-align: right;">78.15 / 78.06</td>
+<td style="text-align: right;">71.36 / 71.28</td>
+<td style="text-align: right;"><strong>76.25 / 76.16</strong></td>
+</tr>
+<tr>
+<td>9</td>
+<td style="text-align: right;">23.73 / 38.76</td>
+<td style="text-align: right;">24.98 / 41.76</td>
+<td style="text-align: right;">21.07 / 34.43</td>
+<td style="text-align: right;">25.31 / 42.95</td>
+<td style="text-align: right;">25.32 / 41.80</td>
+<td style="text-align: right;"><strong>24.08 / 39.94</strong></td>
+</tr>
+<tr>
+<td>11</td>
+<td style="text-align: right;">27.59 / 39.08</td>
+<td style="text-align: right;">28.78 / 40.55</td>
+<td style="text-align: right;">24.86 / 35.64</td>
+<td style="text-align: right;">30.25 / 45.37</td>
+<td style="text-align: right;">28.62 / 41.23</td>
+<td style="text-align: right;"><strong>28.02 / 40.38</strong></td>
+</tr>
+<tr>
+<td>12</td>
+<td style="text-align: right;">11.94 / 25.50</td>
+<td style="text-align: right;">13.23 / 27.48</td>
+<td style="text-align: right;">10.74 / 23.23</td>
+<td style="text-align: right;">14.37 / 37.18</td>
+<td style="text-align: right;">13.26 / 31.60</td>
+<td style="text-align: right;"><strong>12.71 / 29.00</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>本次运行中，序号11的平均验证相对误差比序号9高约0.44个百分点，训练相对误差高约3.94个百分点。Case2、case5验证误差降低，其余三个case升高；eta 归一化后的 MSE 数值更低，不等于物理电流相对误差更低。</p>
+<p>序号12的五个case训练与验证相对误差均低于序号9、11。平均验证误差降为29.00%，比序号9低10.94个百分点（相对降低27.39%），比序号11低11.38个百分点（相对降低28.17%）。这是V7整体方案的改善，尚不能将收益单独归因于入射源支路或几何支路。</p>
+<h2>消融实验</h2>
+<p>序号13、14使用 <code>ablation_study.py</code>，均加载序号12的 <code>case1_1ghz_bestV7_4_eta.pt</code>，<code>MG_num=4</code>，使用同一 eta 数据集和相同的 train/val 角度划分。只关闭指定支路后前向评测一遍，没有重新训练、微调或更新参数。表内使用与前文相同的复电流相对L2 error，单位为百分比，按 <code>train / val</code> 展示，越低越好。每个角度先计算error，再分别对各case的训练/验证角度取平均，最后对5个case等权平均。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>序号 / 基准</th>
+<th>illustration</th>
+<th style="text-align: right;">case1 train/val</th>
+<th style="text-align: right;">case2 train/val</th>
+<th style="text-align: right;">case3 train/val</th>
+<th style="text-align: right;">case4 train/val</th>
+<th style="text-align: right;">case5 train/val</th>
+<th style="text-align: right;">average train/val</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PO base error</td>
+<td>-</td>
+<td style="text-align: right;">74.77 / 75.11</td>
+<td style="text-align: right;">78.89 / 78.93</td>
+<td style="text-align: right;">78.09 / 77.40</td>
+<td style="text-align: right;">78.15 / 78.06</td>
+<td style="text-align: right;">71.36 / 71.28</td>
+<td style="text-align: right;"><strong>76.25 / 76.16</strong></td>
+</tr>
+<tr>
+<td>12</td>
+<td>未关闭</td>
+<td style="text-align: right;">11.94 / 25.50</td>
+<td style="text-align: right;">13.23 / 27.48</td>
+<td style="text-align: right;">10.74 / 23.23</td>
+<td style="text-align: right;">14.37 / 37.18</td>
+<td style="text-align: right;">13.26 / 31.60</td>
+<td style="text-align: right;"><strong>12.71 / 29.00</strong></td>
+</tr>
+<tr>
+<td>13</td>
+<td>关闭 geo 支路</td>
+<td style="text-align: right;">72.63 / 73.12</td>
+<td style="text-align: right;">75.15 / 74.95</td>
+<td style="text-align: right;">71.79 / 71.72</td>
+<td style="text-align: right;">86.79 / 87.69</td>
+<td style="text-align: right;">73.95 / 72.94</td>
+<td style="text-align: right;"><strong>76.06 / 76.08</strong></td>
+</tr>
+<tr>
+<td>14</td>
+<td>关闭 src 支路</td>
+<td style="text-align: right;">61.58 / 63.71</td>
+<td style="text-align: right;">61.75 / 62.71</td>
+<td style="text-align: right;">60.30 / 64.13</td>
+<td style="text-align: right;">69.06 / 68.92</td>
+<td style="text-align: right;">58.50 / 59.19</td>
+<td style="text-align: right;"><strong>62.24 / 63.73</strong></td>
+</tr>
+<tr>
+<td>15</td>
+<td>关闭 G1/G2 的 BiasTransformerBlock</td>
+<td style="text-align: right;">77.00 / 78.54</td>
+<td style="text-align: right;">82.14 / 83.41</td>
+<td style="text-align: right;">79.53 / 79.29</td>
+<td style="text-align: right;">78.62 / 81.88</td>
+<td style="text-align: right;">79.04 / 79.34</td>
+<td style="text-align: right;"><strong>79.27 / 80.49</strong></td>
+</tr>
+<tr>
+<td>16</td>
+<td>关闭 G1/G2 的 CoupleExchange</td>
+<td style="text-align: right;">63.17 / 64.30</td>
+<td style="text-align: right;">76.82 / 77.33</td>
+<td style="text-align: right;">66.92 / 66.52</td>
+<td style="text-align: right;">75.42 / 76.93</td>
+<td style="text-align: right;">63.85 / 64.62</td>
+<td style="text-align: right;"><strong>69.23 / 69.94</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>结果文件：序号13为 <code>checkpoints/ablation_study/source1_geo0_MG4_eta_error.json</code>，序号14为 <code>checkpoints/ablation_study/source0_geo1_MG4_eta_error.json</code>。这两组反映已训练V7对支路的依赖，不等同于关闭支路后重新训练的结果。</p>
+<p>序号15、16沿用序号12的 checkpoint、eta 数据集、<code>MG_num=4</code> 和相同误差口径；source 与 geo 支路均开启，只在每次 MGTransformer 调用中分别关闭 G1/G2 的一条交流支路，不重新训练。两条支路都从各层原始输入计算，关闭 BiasTransformerBlock 时保留原始特征及 CoupleExchange。结果文件分别为 <code>checkpoints/ablation_study/bias0_cplx1_MG4_eta_error.json</code> 和 <code>checkpoints/ablation_study/bias1_cplx0_MG4_eta_error.json</code>。相对序号12的平均验证误差 29.00%，两组分别升至 80.49% 和 69.94%；这只能说明已训练的 V7 权重对两条支路都敏感。关闭任一支路后若重新初始化或微调，其误差能否重新降低、降低到什么程度，尚未测试，不能根据本表断言该支路在可重新训练的网络中不可缺少。</p>
+<h2>Loss 曲线</h2>
+<h3>序号7</h3>
+<p>
+<img alt="序号7 Case 1 loss曲线" src="assets/loss_curves/experiment_7_case1.png" width="32%"/>
+<img alt="序号7 Case 2 loss曲线" src="assets/loss_curves/experiment_7_case2.png" width="32%"/>
+<img alt="序号7平均loss曲线" src="assets/loss_curves/experiment_7_average.png" width="32%"/>
+</p>
+<h3>序号8</h3>
+<p>
+<img alt="序号8三个case平均loss曲线" src="assets/loss_curves/experiment_8_average.png" width="65%"/>
+</p>
+<h3>序号9</h3>
+<p>
+<img alt="序号9五个case平均loss曲线" src="assets/loss_curves/experiment_9_average.png" width="65%"/>
+</p>
+<h3>序号10</h3>
+<p>
+<img alt="序号10五个case平均loss曲线" src="assets/loss_curves/experiment_10_average.png" width="65%"/>
+</p>
+<h3>序号11</h3>
+<p>
+<img alt="序号11五个case eta固定归一化平均loss曲线，V6，MG_num=4" src="assets/loss_curves/experiment_11_average.png" width="65%"/>
+</p>
+<h3>序号12</h3>
+<p>
+<img alt="序号12五个case eta固定归一化平均loss曲线，V7，MG_num=4，最佳第705轮" src="assets/loss_curves/experiment_12_average.png" width="65%"/>
+</p></main></body>
+</html>

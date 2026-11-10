@@ -3,214 +3,72 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="PO to MoM surface-current prediction experiments and interactive visualization">
-  <title>PO to MoM | 实验记录与可视化</title>
+  <meta name="description" content="PO to MoM training records and interactive RCS evaluation">
+  <title>PO → MoM | 实验记录</title>
   <style>
-    :root {
-      color-scheme: light;
-      --ink: #17212b;
-      --muted: #63707c;
-      --line: #d9e0e5;
-      --panel: #f5f7f8;
-      --blue: #2768ad;
-      --green: #238c69;
-      --orange: #c76b32;
-      --header-h: 64px;
-    }
+    :root { color-scheme: light; --ink: #1f2d32; --muted: #607078; --line: #dce4e2; --green: #19745e; }
     * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; background: #fff; color: var(--ink); }
-    body { font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif; letter-spacing: 0; }
-    button, table { font: inherit; }
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      min-height: var(--header-h);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      padding: 10px 24px;
-      background: rgba(255,255,255,.96);
-      border-bottom: 1px solid var(--line);
-      backdrop-filter: blur(12px);
-    }
-    .brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
-    .brand strong { font-size: 19px; white-space: nowrap; }
-    .brand span { color: var(--muted); font-size: 13px; white-space: nowrap; }
-    .tabs {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      padding: 3px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: var(--panel);
-    }
-    .tabs button {
-      min-width: 112px;
-      height: 36px;
-      padding: 0 16px;
-      border: 0;
-      border-radius: 4px;
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-    }
-    .tabs button[aria-selected="true"] {
-      background: #fff;
-      color: var(--blue);
-      box-shadow: 0 1px 4px rgba(23,33,43,.12);
-      font-weight: 650;
-    }
-    .page { max-width: 1500px; margin: 0 auto; padding: 34px 28px 64px; }
-    .page[hidden], .visualization[hidden] { display: none; }
-    .section-head { margin: 0 0 18px; }
-    .section-head h1 { margin: 0 0 7px; font-size: 28px; font-weight: 720; }
-    .section-head p { margin: 0; color: var(--muted); font-size: 14px; }
-    h2 { margin: 38px 0 14px; font-size: 21px; }
-    h3 { margin: 28px 0 10px; font-size: 16px; color: #34414d; }
-    .table-wrap {
-      width: 100%;
-      overflow-x: auto;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: #fff;
-    }
-    table { width: 100%; border-collapse: collapse; min-width: 980px; font-size: 13px; }
-    th, td { padding: 10px 11px; border-right: 1px solid #e8ecef; border-bottom: 1px solid #e8ecef; text-align: left; vertical-align: top; white-space: nowrap; }
-    th:last-child, td:last-child { border-right: 0; }
-    tr:last-child td { border-bottom: 0; }
-    th { background: #eef2f4; color: #34414d; font-weight: 680; position: sticky; top: 0; }
-    tbody tr:hover { background: #f7fafb; }
-    code { color: #174d79; background: #edf4f8; border-radius: 3px; padding: 1px 4px; }
-    .baseline td { background: #fff8ed; color: #77431e; }
-    .current td { background: #edf8f4; }
-    .plot-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-    figure { margin: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #fff; }
-    figure img { display: block; width: 100%; height: auto; }
-    figcaption { padding: 9px 12px; color: var(--muted); border-top: 1px solid var(--line); font-size: 13px; }
-    .visualization { position: relative; width: 100%; height: calc(100dvh - var(--header-h)); background: #eef2f4; }
-    .visualization iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
-    .loading { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; color: var(--muted); background: #eef2f4; }
-    @media (max-width: 800px) {
-      :root { --header-h: 112px; }
-      .topbar { align-items: stretch; flex-direction: column; gap: 8px; padding: 10px 14px; }
+    html, body { margin: 0; height: 100%; }
+    body { display: flex; flex-direction: column; min-width: 320px; height: 100dvh; background: #fff; color: var(--ink); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; letter-spacing: 0; }
+    header { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 20px; padding: 11px 24px; border-bottom: 1px solid var(--line); background: #fff; }
+    .brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; white-space: nowrap; }
+    .brand strong { font-size: 19px; }
+    .brand span { font-size: 12px; color: var(--muted); }
+    nav { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 6px; background: #f2f6f5; }
+    nav button { min-height: 36px; padding: 6px 14px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; }
+    nav button[aria-selected="true"] { background: #fff; color: var(--green); box-shadow: 0 1px 4px #1f2d321c; font-weight: 650; }
+    nav button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+    main { position: relative; flex: 1; min-height: 0; background: #fff; }
+    iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+    .loading { position: absolute; inset: 0; display: grid; place-items: center; background: #fff; color: var(--muted); font-size: 13px; }
+    .loading[hidden] { display: none; }
+    @media (max-width: 760px) {
+      header { align-items: stretch; flex-direction: column; gap: 9px; padding: 9px 12px; }
       .brand { justify-content: space-between; }
-      .tabs button { min-width: 0; }
-      .page { padding: 24px 14px 48px; }
-      .section-head h1 { font-size: 24px; }
-      .plot-row { grid-template-columns: 1fr; }
+      nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      nav button { min-width: 0; padding: 7px 5px; }
     }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand"><strong>PO → MoM</strong><span>表面电流预测实验</span></div>
-    <nav class="tabs" aria-label="页面视图">
-      <button type="button" data-view="record" aria-selected="true">训练记录</button>
-      <button type="button" data-view="visualization" aria-selected="false">交互可视化</button>
+  <header>
+    <div class="brand"><strong>PO → MoM</strong><span>表面电流预测</span></div>
+    <nav role="tablist" aria-label="内容视图">
+      <button type="button" role="tab" data-view="weekly" aria-selected="true">Weekly Journal</button>
+      <button type="button" role="tab" data-view="record" aria-selected="false">Record</button>
+      <button type="button" role="tab" data-view="v6" aria-selected="false">V6 可视化</button>
+      <button type="button" role="tab" data-view="v7" aria-selected="false">V7 可视化</button>
     </nav>
   </header>
-
-  <main id="record-view" class="page">
-    <div class="section-head">
-      <h1>训练记录</h1>
-      <p>网络结构实验、训练方案对照与五个目标的最新结果</p>
-    </div>
-
-    <h2>脚本区别</h2>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>脚本</th><th>LocalExchange / DownBlock</th><th>BiasTransformerBlock</th><th>MGTransformer 多次调用</th><th>MG 后 LocalExchange</th><th>默认 MG_num</th><th>checkpoint</th><th>说明</th></tr></thead>
-        <tbody>
-          <tr><td><code>train.py</code></td><td>Post-Norm</td><td>Pre-Norm</td><td>共享参数</td><td>共享参数</td><td>2</td><td><code>case1_1ghz_best.pt</code></td><td>基础对照版本</td></tr>
-          <tr><td><code>trainV2.py</code></td><td>Pre-Norm</td><td>Pre-Norm</td><td>共享参数</td><td>共享参数</td><td>2</td><td><code>case1_1ghz_bestV2.pt</code></td><td>验证 Pre-Norm 对深层训练和梯度传播的作用</td></tr>
-          <tr><td><code>trainV3.py</code></td><td>Post-Norm</td><td>Pre-Norm</td><td>独立参数</td><td>独立参数</td><td>2</td><td><code>case1_1ghz_bestV3.pt</code></td><td>验证参数不共享的作用</td></tr>
-          <tr><td><code>trainV4.py</code></td><td>Pre-Norm</td><td>Pre-Norm</td><td>独立参数</td><td>独立参数</td><td>3</td><td><code>case1_1ghz_bestV4.pt</code></td><td>Pre-Norm 与独立参数结合</td></tr>
-          <tr><td><code>trainV5.py</code></td><td>Pre-Norm</td><td>Pre-Norm</td><td>共享参数</td><td>共享参数</td><td>2</td><td><code>case1_1ghz_bestV5.pt</code></td><td>二Case交替训练，以平均验证loss选择best</td></tr>
-          <tr><td><code>trainV6.py</code></td><td>Pre-Norm</td><td>Pre-Norm</td><td>共享参数</td><td>共享参数</td><td>2</td><td><code>case1_1ghz_bestV6.pt</code></td><td>全部case累计梯度后统一执行一次optimizer step</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h2>训练结果</h2>
-    <h3>二个 Case 训练</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>序号</th><th>脚本</th><th>MG_num</th><th>Round</th><th>Epoch</th><th>统一lr</th><th>case1 train</th><th>case1 val</th><th>case2 train</th><th>case2 val</th></tr></thead>
-        <tbody>
-          <tr class="baseline"><td></td><td>PO baseline</td><td></td><td></td><td></td><td></td><td>0.4651140</td><td>0.4716737</td><td>0.6114222</td><td>0.5977157</td></tr>
-          <tr><td>1</td><td><code>train.py</code></td><td>1</td><td>50</td><td>100</td><td>True</td><td></td><td>0.34</td><td></td><td>0.43</td></tr>
-          <tr><td>2</td><td><code>trainV2.py</code></td><td>2</td><td>20</td><td>100</td><td>True</td><td>0.2556597</td><td>0.3124883</td><td>0.2644765</td><td>0.3346760</td></tr>
-          <tr><td>3</td><td><code>trainV3.py</code></td><td>2</td><td>20</td><td>100</td><td>True</td><td>0.3473585</td><td>0.3977745</td><td>0.2788116</td><td>0.3514389</td></tr>
-          <tr><td>4</td><td><code>train.py</code></td><td>1</td><td>50</td><td>100</td><td>True</td><td>0.3161856</td><td>0.3687931</td><td>0.4054257</td><td>0.4521745</td></tr>
-          <tr><td>5</td><td><code>trainV2.py</code></td><td>3</td><td>50</td><td>100</td><td>True</td><td>0.1185857</td><td>0.2083498</td><td>0.1794636</td><td>0.2775576</td></tr>
-          <tr><td>6</td><td><code>trainV4.py</code></td><td>3</td><td>6</td><td>100</td><td>True</td><td>0.1014225</td><td>0.1943720</td><td>0.1743607</td><td>0.2596381</td></tr>
-          <tr><td>7</td><td><code>trainV5.py</code></td><td>4</td><td>2</td><td>1000</td><td>True</td><td>0.06171694</td><td>0.1601393</td><td>0.07219689</td><td>0.1813488</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>三个 Case 训练</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>序号</th><th>脚本</th><th>MG_num</th><th>Epoch</th><th>最佳Epoch</th><th>case1 train/val</th><th>case2 train/val</th><th>case3 train/val</th><th>平均train/val</th></tr></thead>
-        <tbody>
-          <tr class="baseline"><td></td><td>PO baseline</td><td></td><td></td><td></td><td>0.4651140 / 0.4716737</td><td>0.6114222 / 0.5977157</td><td>0.5367418 / 0.5056661</td><td>0.5377593 / 0.5250185</td></tr>
-          <tr><td>8</td><td><code>trainV6.py</code></td><td>4</td><td>3000</td><td>462</td><td>0.04296171 / 0.1226621</td><td>0.05313023 / 0.1357329</td><td>0.03616315 / 0.1053813</td><td>0.04408503 / 0.1212588</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>五个 Case 训练</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>序号</th><th>脚本</th><th>MG_num</th><th>Epoch</th><th>最佳Epoch</th><th>case1 train/val</th><th>case2 train/val</th><th>case3 train/val</th><th>case4 train/val</th><th>case5 train/val</th><th>平均train/val</th></tr></thead>
-        <tbody>
-          <tr class="baseline"><td></td><td>PO baseline</td><td></td><td></td><td></td><td>0.4651140 / 0.4716737</td><td>0.6114222 / 0.5977158</td><td>0.5367418 / 0.5056661</td><td>0.6407698 / 0.6255563</td><td>0.3923243 / 0.3864167</td><td>0.5292744 / 0.5174057</td></tr>
-          <tr><td>9</td><td><code>trainV6.py</code></td><td>4</td><td>1000</td><td>494</td><td>0.04624768 / 0.1362400</td><td>0.05960255 / 0.1733138</td><td>0.03895196 / 0.1031478</td><td>0.06664200 / 0.1973725</td><td>0.04865366 / 0.1385167</td><td>0.05201957 / 0.1497182</td></tr>
-          <tr class="current"><td>10</td><td><code>trainV6.py (V6_8)</code></td><td>8</td><td>1000</td><td>487</td><td>0.03587838 / 0.1321653</td><td>0.04743682 / 0.1579915</td><td>0.02917274 / 0.1024080</td><td>0.05391008 / 0.1962207</td><td>0.03893700 / 0.1281163</td><td>0.04106700 / 0.1433804</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h2>Loss 曲线</h2>
-    <div class="plot-row">
-      <figure><img src="assets/loss_curves/experiment_7_case1.png" alt="序号7 Case 1 loss曲线"><figcaption>序号7 · Case 1</figcaption></figure>
-      <figure><img src="assets/loss_curves/experiment_7_case2.png" alt="序号7 Case 2 loss曲线"><figcaption>序号7 · Case 2</figcaption></figure>
-      <figure><img src="assets/loss_curves/experiment_7_average.png" alt="序号7平均loss曲线"><figcaption>序号7 · Average</figcaption></figure>
-      <figure><img src="assets/loss_curves/experiment_8_average.png" alt="序号8平均loss曲线"><figcaption>序号8 · 三个Case</figcaption></figure>
-      <figure><img src="assets/loss_curves/experiment_9_average.png" alt="序号9平均loss曲线"><figcaption>序号9 · 五个Case · MG4</figcaption></figure>
-      <figure><img src="assets/loss_curves/experiment_10_average.png" alt="序号10平均loss曲线"><figcaption>序号10 · 五个Case · MG8</figcaption></figure>
-    </div>
+  <main>
+    <div id="loading" class="loading">正在加载…</div>
+    <iframe id="viewer" title="Weekly Journal"></iframe>
   </main>
-
-  <section id="visualization-view" class="visualization" hidden>
-    <div class="loading" id="visualization-loading">正在加载交互数据…</div>
-    <iframe id="visualization-frame" data-src="visualization.html" title="PO to MoM交互可视化" loading="lazy"></iframe>
-  </section>
-
   <script>
-    const buttons = [...document.querySelectorAll('[data-view]')];
-    const recordView = document.getElementById('record-view');
-    const visualizationView = document.getElementById('visualization-view');
-    const frame = document.getElementById('visualization-frame');
-    const loading = document.getElementById('visualization-loading');
-
-    function selectView(view, updateHash = true) {
-      const showVisualization = view === 'visualization';
-      recordView.hidden = showVisualization;
-      visualizationView.hidden = !showVisualization;
-      buttons.forEach(button => button.setAttribute('aria-selected', String(button.dataset.view === view)));
-      if (showVisualization && !frame.getAttribute('src')) {
-        frame.src = frame.dataset.src;
-        frame.addEventListener('load', () => loading.remove(), { once: true });
-      }
-      if (updateHash) history.replaceState(null, '', `#${view}`);
+    const views = {
+      weekly: ['weekly_journal.html', 'Weekly Journal'],
+      record: ['record.html', 'Record'],
+      v6: ['visualization.html', 'V6 可视化'],
+      v7: ['visualization_v7.html', 'V7 可视化']
+    };
+    const viewer = document.getElementById('viewer');
+    const loading = document.getElementById('loading');
+    const tabs = [...document.querySelectorAll('[data-view]')];
+    let current = null;
+    function selectView(name, updateHash = true) {
+      if (!Object.hasOwn(views, name)) name = 'weekly';
+      if (name === current) return;
+      current = name;
+      tabs.forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.view === name)));
+      loading.hidden = false;
+      viewer.title = views[name][1];
+      viewer.onload = () => { loading.hidden = true; };
+      viewer.src = views[name][0];
+      if (updateHash) history.replaceState(null, '', `#${name}`);
     }
-
-    buttons.forEach(button => button.addEventListener('click', () => selectView(button.dataset.view)));
-    selectView(location.hash === '#visualization' ? 'visualization' : 'record', false);
+    tabs.forEach(tab => tab.addEventListener('click', () => selectView(tab.dataset.view)));
+    window.addEventListener('hashchange', () => selectView(location.hash.slice(1), false));
+    selectView(location.hash.slice(1), false);
   </script>
 </body>
 </html>
